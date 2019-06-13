@@ -1,0 +1,57 @@
+name: conda
+base: core18
+version: '4.6.14'
+summary: OS-agnostic, system-level binary package and environment manager.
+description: |
+  Conda is an open source package management system and environment
+  management system for installing multiple versions of software packages
+  and their dependencies and switching easily between them. It works on
+  Linux, OS X and Windows, and was created for Python programs but can
+  package and distribute any software.
+
+grade: stable
+confinement: strict
+
+parts:
+    conda:
+      plugin: nil
+      stage-packages:
+        - libx11-6
+        - libxau6
+        - libxdmcp6
+        - libxcb1
+      override-pull: |
+        curl -o miniconda.sh https://repo.anaconda.com/miniconda/Miniconda3-4.6.14-Linux-x86_64.sh
+      build-environment:
+        - CONDA_TARGET_PREFIX_OVERRIDE: /snap/conda/current
+      override-build: |
+        bash ./miniconda.sh -bfp miniconda
+        miniconda/bin/conda create -yp $SNAPCRAFT_PART_INSTALL conda=4.6.14
+        # create a valid pkgs cache, this will not be writable
+        mkdir -p ${SNAPCRAFT_PART_INSTALL}/pkgs
+        touch ${SNAPCRAFT_PART_INSTALL}/pkgs/urls.txt
+
+    check-connect-script:
+      plugin: dump
+      source: .
+
+plugs:
+  conda-user-dir:
+    interface: personal-files
+    write: 
+     - $HOME/.conda
+     - $HOME/.condarc
+     - $HOME/.bashrc
+
+apps:
+  conda:
+    command-chain:
+      - check-connect.sh
+    adapter: full
+    environment: 
+      HOME: /home/$LOGNAME
+    command: bin/conda
+    plugs:
+      - network
+      - home
+      - conda-user-dir
